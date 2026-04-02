@@ -179,4 +179,22 @@ pub fn save_app_state(app: AppHandle, payload: PersistedAppState) -> Result<(), 
     fs::write(&path, serialized).map_err(|err| format!("Failed to write local store: {err}"))
 }
 
+#[tauri::command]
+pub fn open_config_directory(app: AppHandle) -> Result<(), String> {
+    let app_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|err| format!("Failed to resolve app data directory: {err}"))?;
+
+    if !app_dir.exists() {
+        fs::create_dir_all(&app_dir).map_err(|err| format!("Failed to create app data directory: {err}"))?;
+    }
+
+    tauri_plugin_opener::OpenerExt::opener(&app)
+        .open_path(app_dir.to_string_lossy().to_string(), None::<String>)
+        .map_err(|err| format!("Failed to open config directory: {err}"))?;
+
+    Ok(())
+}
+
 

@@ -42,7 +42,7 @@ function TableEditor({
   }
 
   function clearRows() {
-    onChange([createRow()]);
+    onChange([]);
   }
 
   const activeCount = rows.filter((row) => row.enabled && row.key.trim()).length;
@@ -81,18 +81,31 @@ function TableEditor({
         <div className="px-2 py-2"></div>
       </div>
       <div className="thin-scrollbar min-h-0 overflow-auto">
-        {rows.map((row, index) => (
-          <div key={row.id} className={cn("grid grid-cols-[32px_minmax(0,1fr)_minmax(0,1fr)_36px] border-b border-border/10 px-1", index % 2 === 0 && "bg-background/5")}>
-            <label className="flex items-center justify-center">
-              <input disabled={disabled} type="checkbox" checked={row.enabled} onChange={(event) => updateRow(row.id, "enabled", event.target.checked)} />
-            </label>
-            <Input disabled={disabled} className="h-10 border-0 bg-transparent text-[12px] focus-visible:ring-0 lg:text-[14px]" value={row.key} onChange={(event) => updateRow(row.id, "key", event.target.value)} placeholder={keyLabel} />
-            <Input disabled={disabled} className="h-10 border-0 bg-transparent text-[12px] focus-visible:ring-0 lg:text-[14px]" value={row.value} onChange={(event) => updateRow(row.id, "value", event.target.value)} placeholder={valueLabel} />
-            <button type="button" disabled={disabled} className="flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-40" onClick={() => removeRow(row.id)}>
-              <Trash2 className="h-3.5 w-3.5" />
+        {rows.length > 0 ? (
+          rows.map((row, index) => (
+            <div key={row.id} className={cn("grid grid-cols-[32px_minmax(0,1fr)_minmax(0,1fr)_36px] border-b border-border/10 px-1", index % 2 === 0 && "bg-background/5")}>
+              <label className="flex items-center justify-center">
+                <input disabled={disabled} type="checkbox" checked={row.enabled} onChange={(event) => updateRow(row.id, "enabled", event.target.checked)} />
+              </label>
+              <Input disabled={disabled} className="h-10 border-0 bg-transparent text-[12px] focus-visible:ring-0 lg:text-[14px]" value={row.key} onChange={(event) => updateRow(row.id, "key", event.target.value)} placeholder={keyLabel} />
+              <Input disabled={disabled} className="h-10 border-0 bg-transparent text-[12px] focus-visible:ring-0 lg:text-[14px]" value={row.value} onChange={(event) => updateRow(row.id, "value", event.target.value)} placeholder={valueLabel} />
+              <button type="button" disabled={disabled} className="flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-40" onClick={() => removeRow(row.id)}>
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))
+        ) : (
+          <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground/60">
+            <p className="text-[11px] uppercase tracking-wider">No {title.toLowerCase()} defined</p>
+            <button
+              type="button"
+              onClick={addRow}
+              className="mt-2 text-[10px] underline hover:text-foreground"
+            >
+              Click here to add one
             </button>
           </div>
-        ))}
+        )}
       </div>
     </div>
   );

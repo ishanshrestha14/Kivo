@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Github, Pin, Plus, Sparkles, X } from "lucide-react";
-import { open } from "@tauri-apps/plugin-shell";
+import { openUrl } from "@tauri-apps/plugin-opener";
 
 import { RequestPane } from "@/components/workspace/RequestPane.jsx";
 import { ResponsePane } from "@/components/workspace/ResponsePane.jsx";
@@ -750,7 +750,7 @@ export default function App() {
                 variant="outline"
                 size="sm"
                 className="h-7 gap-1.5 rounded-sm border-border/40 bg-card/40 px-2.5 text-[11px] text-foreground"
-                onClick={() => open("https://github.com/dexter-xD/Kivo")}
+                onClick={() => openUrl("https://github.com/dexter-xD/Kivo")}
               >
                 <Github className="h-3.5 w-3.5" />
                 {starCount !== null ? <span className="leading-none">{starCount.toLocaleString()}</span> : null}

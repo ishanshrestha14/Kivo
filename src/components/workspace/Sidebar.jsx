@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, ChevronRight, Code2, Copy, FolderKanban, History, Pencil, Pin, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Code2, Copy, Folder, FolderKanban, History, Pencil, Pin, Plus, Trash2 } from "lucide-react";
+import { invoke } from "@tauri-apps/api/core";
 
 import { CodeEditor } from "@/components/workspace/CodeEditor.jsx";
 import { Button } from "@/components/ui/button.jsx";
@@ -487,6 +488,20 @@ function RequestsView({
                     </div>
                   </button>
                   <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                    <button
+                      type="button"
+                      className="p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+                      title="Open data directory"
+                      onClick={async () => {
+                        try {
+                          await invoke("open_config_directory");
+                        } catch (error) {
+                          console.error("Failed to open config directory:", error);
+                        }
+                      }}
+                    >
+                      <Folder className="h-3.5 w-3.5" />
+                    </button>
                     <button type="button" className="p-1 text-muted-foreground hover:bg-accent hover:text-foreground" onClick={() => setEditingWorkspaceId(workspace.id)}>
                       <Pencil className="h-3.5 w-3.5" />
                     </button>

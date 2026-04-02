@@ -106,9 +106,9 @@ export function normalizeRequestRecord(request) {
   return {
     ...request,
     pinned: Boolean(request?.pinned),
-    queryParams: Array.isArray(request?.queryParams) && request.queryParams.length ? request.queryParams : [createRow("param")],
-    headers: Array.isArray(request?.headers) && request.headers.length ? request.headers : [createRow("header")],
-    bodyRows: Array.isArray(request?.bodyRows) && request.bodyRows.length ? request.bodyRows : [createRow("body")],
+    queryParams: Array.isArray(request?.queryParams) ? request.queryParams : [createRow("param")],
+    headers: Array.isArray(request?.headers) ? request.headers : [createRow("header")],
+    bodyRows: Array.isArray(request?.bodyRows) ? request.bodyRows : [createRow("body")],
     graphqlVariables: typeof request?.graphqlVariables === "string" ? request.graphqlVariables : "{\n\n}",
     auth: request?.auth && typeof request.auth === "object"
       ? { type: request.auth.type ?? "none", token: request.auth.token ?? "" }
