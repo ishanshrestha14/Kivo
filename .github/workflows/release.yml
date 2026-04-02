@@ -46,9 +46,16 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: "Kivo ${{ github.ref_name }}"
           releaseBody: |
-            Kivo ${{ github.ref_name }}
+            ### **Kivo ${{ github.ref_name }}**
 
-            A minimal, fast, and modern desktop HTTP client built with Rust and Tauri for simple and efficient API testing.
+            This release introduces new features and important stability fixes.
+
+            - New: Added "Open Config Directory" button to workspaces for quick access to local data files.
+            - New: Migrated to Tauri's latest opener plugin for improved security and performance.
+            - Fixed: Resolved an issue where query parameters and headers could not be fully deleted.
+            - Fixed: Initialized new requests with empty parameter and header lists for a cleaner start.
+            - Fixed: Restored missing GraphQL variables editor in the request panel.
+            - Fixed: Improved UI responsiveness and font scaling across all screen sizes.
 
             Installation
 
