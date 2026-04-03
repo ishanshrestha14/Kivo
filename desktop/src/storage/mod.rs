@@ -135,24 +135,7 @@ pub struct ResponseMeta {
     pub method: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct HistoryRecord {
-    pub request_name: String,
-    pub method: String,
-    pub status: u16,
-    pub status_text: String,
-    pub duration: String,
-    pub size: String,
-    #[serde(default)]
-    pub url: String,
-    #[serde(default)]
-    pub fingerprint: String,
-    #[serde(default)]
-    pub saved_at: String,
-    #[serde(default)]
-    pub saved_at_ts: u64,
-}
+
 
 fn default_state() -> PersistedAppState {
     PersistedAppState {
