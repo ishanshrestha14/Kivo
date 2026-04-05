@@ -13,7 +13,8 @@ const tabs = ["Params", "Body", "Auth", "Headers", "Docs"];
 const requestMethods = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"];
 const authModes = [
   { value: "none", label: "No Auth" },
-  { value: "bearer", label: "Bearer Token" }
+  { value: "bearer", label: "Bearer Token" },
+  { value: "inherit", label: "Inherit from Collection" },
 ];
 
 function createRow() {
@@ -261,7 +262,8 @@ export function RequestPane({
   onTabChange,
   onParamsChange,
   onHeadersChange,
-  onAuthChange
+  onAuthChange,
+  envVars,
 }) {
   const activeTab = state.activeEditorTab ?? "Params";
   const bodyDisabled = state.method === "GET" || state.method === "DELETE" || state.bodyType === "none";
@@ -269,11 +271,20 @@ export function RequestPane({
   const isGraphqlBody = state.bodyType === "graphql";
   const isTableBody = state.bodyType === "form-data" || state.bodyType === "form-urlencoded";
 
-  function handleFormatBody() {
-    if (!isJsonBody) {
-      return;
-    }
+  const missingVars = (() => {
+    if (!envVars) return [];
+    const merged = envVars.merged ?? {};
+    const allText = [
+      state.url ?? "",
+      ...(state.headers ?? []).map((h) => `${h.key}=${h.value}`),
+      state.body ?? "",
+    ].join(" ");
+    const placeholders = [...allText.matchAll(/\{\{([^}]+)\}\}/g)].map((m) => m[1].trim());
+    return [...new Set(placeholders)].filter((key) => !(key in merged));
+  })();
 
+  function handleFormatBody() {
+    if (!isJsonBody) return;
     onChange("body", formatJsonText(state.body));
   }
 
@@ -294,6 +305,16 @@ export function RequestPane({
           {isSending ? "Sending" : "Send"}
         </Button>
       </div>
+
+      {missingVars.length > 0 && (
+        <div className="flex items-center gap-2 border-b border-amber-500/20 bg-amber-500/[0.08] px-3 py-1.5 text-[11px] text-amber-500 dark:text-amber-400">
+          <span className="shrink-0">⚠</span>
+          <span>
+            Undefined variable{missingVars.length > 1 ? "s" : ""}:{" "}
+            <code className="font-mono">{missingVars.map((k) => `{{${k}}}`).join(", ")}</code>
+          </span>
+        </div>
+      )}
 
       <div className="border-b border-border/25 px-2 py-2 text-[11px] text-muted-foreground lg:text-[12px]">
         <div className="flex items-center gap-1">
@@ -322,7 +343,18 @@ export function RequestPane({
         ) : null}
 
         {activeTab === "Headers" ? (
-          <TableEditor rows={state.headers} onChange={onHeadersChange} keyLabel="header" valueLabel="value" title="Headers" addLabel="Add" />
+          <div className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)]">
+            <label className="flex items-center gap-2 border-b border-border/20 px-4 py-2.5 text-[11px] text-muted-foreground lg:text-[12px] bg-background/10 cursor-pointer hover:bg-background/20 transition-colors">
+              <input
+                type="checkbox"
+                className="accent-primary w-3 h-3.5 outline-none"
+                checked={state.inheritHeaders ?? true}
+                onChange={(e) => onChange("inheritHeaders", e.target.checked)}
+              />
+              Inherit default headers from parent collection
+            </label>
+            <TableEditor rows={state.headers} onChange={onHeadersChange} keyLabel="header" valueLabel="value" title="Headers" addLabel="Add" />
+          </div>
         ) : null}
 
         {activeTab === "Body" ? (

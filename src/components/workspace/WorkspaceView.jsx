@@ -1,7 +1,7 @@
 import { RequestPane } from "@/components/workspace/RequestPane.jsx";
 import { ResponsePane } from "@/components/workspace/ResponsePane.jsx";
 
-export function WorkspaceView({ request, isSending, onSend, onFieldChange, onUpdateActiveRequest, response }) {
+export function WorkspaceView({ request, isSending, onSend, onFieldChange, onUpdateActiveRequest, response, envVars }) {
   if (!request) return null;
 
   return (
@@ -15,6 +15,7 @@ export function WorkspaceView({ request, isSending, onSend, onFieldChange, onUpd
         onParamsChange={(queryParams) => onUpdateActiveRequest((r) => ({ ...r, queryParams }))}
         onHeadersChange={(headers) => onUpdateActiveRequest((r) => ({ ...r, headers }))}
         onAuthChange={(auth) => onUpdateActiveRequest((r) => ({ ...r, auth }))}
+        envVars={envVars}
       />
       <ResponsePane
         response={response}

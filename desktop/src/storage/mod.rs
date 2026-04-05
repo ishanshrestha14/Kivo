@@ -1,11 +1,153 @@
 use std::collections::HashMap;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
 
 const WORKSPACE_FILE_NAME: &str = "workspace.json";
+const COLLECTION_CONFIG_FILE_NAME: &str = "collection.json";
+
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EnvVar {
+    pub key: String,
+    pub value: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EnvVarsResult {
+    pub workspace: Vec<EnvVar>,
+    pub collection: Vec<EnvVar>,
+    pub merged: HashMap<String, String>,
+}
+
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct CollectionScripts {
+    #[serde(default)]
+    pub pre_request: String,
+    #[serde(default)]
+    pub post_response: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CollectionConfig {
+    #[serde(default)]
+    pub default_headers: Vec<KeyValueRow>,
+    #[serde(default = "default_auth_record")]
+    pub default_auth: AuthRecord,
+    #[serde(default)]
+    pub scripts: CollectionScripts,
+}
+
+fn default_auth_record() -> AuthRecord {
+    AuthRecord { auth_type: "none".to_string(), token: String::new() }
+}
+
+impl Default for CollectionConfig {
+    fn default() -> Self {
+        CollectionConfig {
+            default_headers: vec![],
+            default_auth: default_auth_record(),
+            scripts: CollectionScripts::default(),
+        }
+    }
+}
+
+fn parse_env_file_ordered(path: &Path) -> Vec<EnvVar> {
+    let Ok(content) = fs::read_to_string(path) else { return vec![] };
+    let mut seen = std::collections::HashSet::new();
+    let mut vars = Vec::new();
+
+    for line in content.lines() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        if let Some(eq_pos) = line.find('=') {
+            let key = line[..eq_pos].trim().to_string();
+            if key.is_empty() || seen.contains(&key) {
+                continue;
+            }
+            let raw_val = line[eq_pos + 1..].trim();
+            let value = if (raw_val.starts_with('"') && raw_val.ends_with('"'))
+                || (raw_val.starts_with('\'') && raw_val.ends_with('\''))
+            {
+                raw_val[1..raw_val.len() - 1].to_string()
+            } else {
+                raw_val.to_string()
+            };
+            seen.insert(key.clone());
+            vars.push(EnvVar { key, value });
+        }
+    }
+    vars
+}
+
+fn parse_env_file(path: &Path) -> HashMap<String, String> {
+    parse_env_file_ordered(path)
+        .into_iter()
+        .map(|v| (v.key, v.value))
+        .collect()
+}
+
+fn write_env_file(path: &Path, vars: &[EnvVar]) -> Result<(), String> {
+    let lines: Vec<String> = vars
+        .iter()
+        .filter(|v| !v.key.trim().is_empty())
+        .map(|v| format!("{}={}", v.key.trim(), v.value))
+        .collect();
+    let content = if lines.is_empty() {
+        String::new()
+    } else {
+        lines.join("\n") + "\n"
+    };
+    fs::write(path, content).map_err(|e| format!("Failed to write .env: {e}"))
+}
+
+fn ensure_env_and_gitignore(dir: &Path) {
+    let env_path = dir.join(".env");
+    if !env_path.exists() {
+        let _ = fs::write(&env_path, "");
+    }
+
+    let gitignore_path = dir.join(".gitignore");
+    if !gitignore_path.exists() {
+        let _ = fs::write(&gitignore_path, ".env\n");
+    } else if let Ok(content) = fs::read_to_string(&gitignore_path) {
+        if !content.lines().any(|l| l.trim() == ".env") {
+            let appended = format!("{}\n.env\n", content.trim_end());
+            let _ = fs::write(&gitignore_path, appended);
+        }
+    }
+}
+
+fn get_collection_dir(root: &Path, workspace_name: &str, collection_name: &str) -> PathBuf {
+    root.join(workspace_name).join("collections").join(collection_name)
+}
+
+pub fn load_env_vars(workspace_path: &Path, collection_path: Option<&Path>) -> HashMap<String, String> {
+    let mut vars = parse_env_file(&workspace_path.join(".env"));
+    if let Some(col_path) = collection_path {
+        for (k, v) in parse_env_file(&col_path.join(".env")) {
+            vars.insert(k, v);
+        }
+    }
+    vars
+}
+
+pub fn load_collection_config_from_path(collection_path: &Path) -> CollectionConfig {
+    let path = collection_path.join(COLLECTION_CONFIG_FILE_NAME);
+    let Ok(json) = fs::read_to_string(&path) else { return CollectionConfig::default() };
+    serde_json::from_str(&json).unwrap_or_default()
+}
+
+
 
 fn default_sidebar_width() -> u16 {
     304
@@ -210,15 +352,20 @@ pub fn get_default_storage_path(app: AppHandle) -> Result<String, String> {
     Ok(document_dir.join("Kivo").to_string_lossy().to_string())
 }
 
-fn get_storage_root(app: &AppHandle) -> Result<PathBuf, String> {
+pub fn get_storage_root(app: &AppHandle) -> Result<PathBuf, String> {
     let state = get_app_config(app.clone())?;
 
     if let Some(path) = state.storage_path {
         Ok(path)
     } else {
-        app.path()
-            .app_data_dir()
-            .map_err(|err| format!("Failed to resolve app data directory: {err}"))
+        match app.path().document_dir() {
+            Ok(doc_dir) => Ok(doc_dir.join("Kivo")),
+            Err(_) => {
+                app.path()
+                    .app_data_dir()
+                    .map_err(|err| format!("Failed to resolve fallback storage directory: {err}"))
+            }
+        }
     }
 }
 
@@ -249,7 +396,6 @@ pub fn load_app_state(app: AppHandle) -> Result<PersistedAppState, String> {
                 let mut collections = Vec::new();
 
         for col_meta in workspace_file.collections {
-                    // Collection path is relative to workspace folder
                     let col_path = if col_meta.path.starts_with("/") || col_meta.path.contains(":\\") {
                         PathBuf::from(&col_meta.path)
                     } else {
@@ -294,8 +440,6 @@ pub fn load_app_state(app: AppHandle) -> Result<PersistedAppState, String> {
         }
     }
 
-    // We still need a way to store global app state like active workspace, etc.
-    // For now, let's try to find if there's a global state file in AppData.
     let app_data_dir = app
         .path()
         .app_data_dir()
@@ -324,7 +468,6 @@ pub fn save_app_state(app: AppHandle, payload: PersistedAppState) -> Result<(), 
         fs::create_dir_all(&root).map_err(|err| format!("Failed to create storage root: {err}"))?;
     }
 
-    // 1. Save global state (active workspace, etc.) in AppData
     let app_data_dir = app
         .path()
         .app_data_dir()
@@ -332,14 +475,19 @@ pub fn save_app_state(app: AppHandle, payload: PersistedAppState) -> Result<(), 
     let state_file_path = app_data_dir.join("state.json");
 
     let mut state_to_save = payload.clone();
-    state_to_save.workspaces = vec![]; // Don't save full data in global state
+    state_to_save.workspaces = vec![]; 
+    
+    if state_to_save.storage_path.is_none() {
+        if let Ok(config) = get_app_config(app.clone()) {
+            state_to_save.storage_path = config.storage_path;
+        }
+    }
 
     let state_json = serde_json::to_string_pretty(&state_to_save)
         .map_err(|err| format!("Failed to serialize state.json: {err}"))?;
     fs::write(&state_file_path, state_json)
         .map_err(|err| format!("Failed to write state.json: {err}"))?;
 
-    // 2. Cleanup: Remove workspaces that are no longer in the state
     if let Ok(entries) = fs::read_dir(&root) {
         for entry in entries {
             if let Ok(entry) = entry {
@@ -347,7 +495,6 @@ pub fn save_app_state(app: AppHandle, payload: PersistedAppState) -> Result<(), 
                 if path.is_dir() {
                     let dir_name = entry.file_name().to_string_lossy().to_string();
                     if !payload.workspaces.iter().any(|w| w.name == dir_name) {
-                        // Only delete if it looks like a Kivo workspace (has workspace.json)
                         if path.join(WORKSPACE_FILE_NAME).exists() {
                             let _ = fs::remove_dir_all(&path);
                         }
@@ -357,13 +504,13 @@ pub fn save_app_state(app: AppHandle, payload: PersistedAppState) -> Result<(), 
         }
     }
 
-    // 3. Save each workspace
     for workspace in payload.workspaces {
         let workspace_path = root.join(&workspace.name);
         if !workspace_path.exists() {
             fs::create_dir_all(&workspace_path)
                 .map_err(|err| format!("Failed to create workspace directory: {err}"))?;
         }
+        ensure_env_and_gitignore(&workspace_path);
 
         let mut collections_meta = Vec::new();
         let collections_root = workspace_path.join("collections");
@@ -371,7 +518,6 @@ pub fn save_app_state(app: AppHandle, payload: PersistedAppState) -> Result<(), 
             let _ = fs::create_dir_all(&collections_root);
         }
 
-        // Cleanup: Remove collections that are no longer in the workspace
         if let Ok(entries) = fs::read_dir(&collections_root) {
             for entry in entries {
                 if let Ok(entry) = entry {
@@ -386,7 +532,6 @@ pub fn save_app_state(app: AppHandle, payload: PersistedAppState) -> Result<(), 
             }
         }
 
-        // 4. Save each collection
         for collection in workspace.collections {
             let collection_dir_name = format!("collections/{}", collection.name);
             let collection_path = workspace_path.join(&collection_dir_name);
@@ -395,19 +540,24 @@ pub fn save_app_state(app: AppHandle, payload: PersistedAppState) -> Result<(), 
                 fs::create_dir_all(&collection_path)
                     .map_err(|err| format!("Failed to create collection directory: {err}"))?;
             }
+            ensure_env_and_gitignore(&collection_path);
 
-            // Clean up existing files in collection directory to handle renames/deletes
             let existing_entries = fs::read_dir(&collection_path)
                 .map_err(|err| format!("Failed to read collection directory: {err}"))?;
             for entry in existing_entries {
                 let entry = entry.map_err(|err| format!("Failed to read entry: {err}"))?;
-                if entry.path().is_file() {
-                    fs::remove_file(entry.path())
-                        .map_err(|err| format!("Failed to remove old request file: {err}"))?;
+                let ep = entry.path();
+                if ep.is_file() {
+                    let is_json = ep.extension().map_or(false, |e| e == "json");
+                    let is_collection_config = ep.file_name()
+                        .map_or(false, |n| n == COLLECTION_CONFIG_FILE_NAME);
+                    if is_json && !is_collection_config {
+                        fs::remove_file(&ep)
+                            .map_err(|err| format!("Failed to remove old request file: {err}"))?;
+                    }
                 }
             }
 
-            // Save requests as individual JSON files
             for request in collection.requests {
                 let request_file_name = format!("{}.json", request.name);
                 let request_path = collection_path.join(request_file_name);
@@ -423,7 +573,6 @@ pub fn save_app_state(app: AppHandle, payload: PersistedAppState) -> Result<(), 
             });
         }
 
-        // 5. Save workspace.json metadata
         let workspace_file = WorkspaceFile {
             info: WorkspaceInfo {
                 name: workspace.name.clone(),
@@ -476,7 +625,6 @@ pub fn reveal_item(
     let mut path = root.join(&workspace_name);
 
     if let Some(col_name) = collection_name {
-        // Find the collection path from workspace.json
         let workspace_file_path = path.join(WORKSPACE_FILE_NAME);
         if workspace_file_path.exists() {
             let workspace_json = fs::read_to_string(&workspace_file_path)
@@ -492,7 +640,6 @@ pub fn reveal_item(
                 }
 
                 if let Some(req_name) = request_name {
-                    // Requests are stored as {request_name}.json in the collection folder
                     let req_file_path = path.join(format!("{}.json", req_name));
                     if req_file_path.exists() {
                         path = req_file_path;
@@ -503,7 +650,6 @@ pub fn reveal_item(
     }
 
     if !path.exists() {
-        // Fallback to parent if specific file doesn't exist
         if let Some(parent) = path.parent() {
             if parent.exists() {
                 path = parent.to_path_buf();
@@ -518,3 +664,100 @@ pub fn reveal_item(
     Ok(())
 }
 
+#[tauri::command]
+pub fn get_resolved_storage_path(app: AppHandle) -> Result<String, String> {
+    let root = get_storage_root(&app)?;
+    Ok(root.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+pub fn get_env_vars(
+    app: AppHandle,
+    workspace_name: String,
+    collection_name: Option<String>,
+) -> Result<EnvVarsResult, String> {
+    let root = get_storage_root(&app)?;
+    let workspace_path = root.join(&workspace_name);
+
+    let workspace_vars = parse_env_file_ordered(&workspace_path.join(".env"));
+
+    let collection_vars = match &collection_name {
+        Some(col) => {
+            let col_path = get_collection_dir(&root, &workspace_name, col);
+            parse_env_file_ordered(&col_path.join(".env"))
+        }
+        None => vec![],
+    };
+
+    let mut merged = HashMap::new();
+    for v in &workspace_vars {
+        merged.insert(v.key.clone(), v.value.clone());
+    }
+    for v in &collection_vars {
+        merged.insert(v.key.clone(), v.value.clone());
+    }
+
+    Ok(EnvVarsResult { workspace: workspace_vars, collection: collection_vars, merged })
+}
+
+#[tauri::command]
+pub fn save_env_vars(
+    app: AppHandle,
+    workspace_name: String,
+    collection_name: Option<String>,
+    vars: Vec<EnvVar>,
+) -> Result<(), String> {
+    let root = get_storage_root(&app)?;
+
+    let env_path = match &collection_name {
+        Some(col) => {
+            let col_path = get_collection_dir(&root, &workspace_name, col);
+            if !col_path.exists() {
+                fs::create_dir_all(&col_path)
+                    .map_err(|e| format!("Failed to create collection dir: {e}"))?;
+            }
+            col_path.join(".env")
+        }
+        None => {
+            let ws_path = root.join(&workspace_name);
+            if !ws_path.exists() {
+                return Err(format!("Workspace '{}' does not exist", workspace_name));
+            }
+            ws_path.join(".env")
+        }
+    };
+
+    write_env_file(&env_path, &vars)
+}
+
+#[tauri::command]
+pub fn get_collection_config(
+    app: AppHandle,
+    workspace_name: String,
+    collection_name: String,
+) -> Result<CollectionConfig, String> {
+    let root = get_storage_root(&app)?;
+    let col_path = get_collection_dir(&root, &workspace_name, &collection_name);
+    Ok(load_collection_config_from_path(&col_path))
+}
+
+#[tauri::command]
+pub fn save_collection_config(
+    app: AppHandle,
+    workspace_name: String,
+    collection_name: String,
+    config: CollectionConfig,
+) -> Result<(), String> {
+    let root = get_storage_root(&app)?;
+    let col_path = get_collection_dir(&root, &workspace_name, &collection_name);
+
+    if !col_path.exists() {
+        fs::create_dir_all(&col_path)
+            .map_err(|e| format!("Failed to create collection dir: {e}"))?;
+    }
+
+    let json = serde_json::to_string_pretty(&config)
+        .map_err(|e| format!("Failed to serialize collection config: {e}"))?;
+    fs::write(col_path.join(COLLECTION_CONFIG_FILE_NAME), json)
+        .map_err(|e| format!("Failed to write collection.json: {e}"))
+}

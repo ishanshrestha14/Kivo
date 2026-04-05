@@ -48,40 +48,14 @@ jobs:
           releaseBody: |
             ### **Kivo ${{ github.ref_name }}**
 
-            This release introduces a major architectural overhaul with hierarchical collections and advanced interaction features.
+            This release focuses on multi-scope environment variables and localized settings improvements.
 
-            - New: Hierarchical Collection Structure. Organize requests into nested collections within workspaces.
-            - New: Setup Wizard. Seamless onboarding experience to bootstrap application configuration.
-            - New: Sidebar Search. Real-time filtering for collections and requests.
-            - New: Enhanced Context Menus. High-performance logic for cloning, renaming, and copy-pasting.
-            - New: Native System Dialogs. Integrated native directory selection for storage paths.
-            - Improved: Name-Based Identifiers. Robust tracking system for workspaces and collections.
-            - Fixed: "Show in Files" Integration. Reliable native folder reveal functionality.
-            - Fixed: Empty State Logic. Improved UI prompts for empty workspaces and collections.
-
-            Installation
-
-            Windows
-            Download the .msi or .exe installer from the assets section below and run it to install Kivo on your system.
-
-            Debian / Ubuntu
-            Use the following commands to download and install the .deb package directly from your terminal:
-            ```bash
-            wget https://github.com/dexter-xD/Kivo/releases/download/${{ github.ref_name }}/kivo_0.1.1_amd64.deb
-            sudo dpkg -i kivo_0.1.1_amd64.deb
-            sudo apt-get install -f # Fix any missing dependencies
-            ```
-
-            Run
-            Once installed, launch Kivo from your application menu or by typing:
-            ```bash
-            kivo
-            ```
-
-            Package Info
-            - Version: ${{ github.ref_name }}
-            - Architecture: amd64 / x64
-            - Platforms: Windows (10/11), Linux (Debian/Ubuntu)
-            - License: MIT
-            - Repository: https://github.com/dexter-xD/Kivo
+            - New: Multi-Scope Environments. Manage global workspace variables and collection-specific overrides.
+            - New: Modernized Collection Settings. Completely redesigned Overview, Headers, and Auth pages.
+            - New: Auth Token Visibility. Toggle visibility for sensitive authentication tokens.
+            - New: Storage Folder Access. Open the data directory directly from the UI.
+            - Improved: Zero-Friction Workflow. Immediate autosave for deletions and improved navigation.
+            - Improved: Navbar Analytics. Refined environment chips and tooltip summaries.
+            - Fixed: Documents Storage Fallback. Corrected path resolution to default to your Documents folder.
+            - Fixed: Auth Save TypeError. Resolved various UI state-to-backend communication bugs.
           projectPath: desktop

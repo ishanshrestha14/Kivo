@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Check, ChevronDown, ChevronRight, Code2, Copy, FolderKanban, Layers, MoreVertical, Pencil, Pin, Plus, Search, SquareKanban, Trash2, X } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, Code2, Copy, FolderKanban, Layers, MoreVertical, Pencil, Pin, Plus, Search, Settings, SquareKanban, Trash2, X } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 
 import { CodeEditor } from "@/components/workspace/CodeEditor.jsx";
@@ -268,7 +268,7 @@ function RequestContextMenu({ menu, onGenerateCode, onCopyCurl, onRename, onDupl
   );
 }
 
-function CollectionContextMenu({ menu, onCreateRequest, onRename, onDuplicate, onPaste, onReveal, onDelete, onClose, canPaste }) {
+function CollectionContextMenu({ menu, onCreateRequest, onRename, onDuplicate, onPaste, onReveal, onDelete, onClose, canPaste, onOpenSettings }) {
   useEffect(() => {
     if (!menu) return;
     function handlePointer() { onClose(); }
@@ -284,6 +284,9 @@ function CollectionContextMenu({ menu, onCreateRequest, onRename, onDuplicate, o
     <div className="fixed z-[210] min-w-[180px] border border-border/60 bg-popover p-1 shadow-2xl" style={{ left: menu.x, top: menu.y }} onMouseDown={(e) => e.stopPropagation()} onContextMenu={(e) => e.preventDefault()}>
       <button type="button" className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] text-foreground hover:bg-accent/45" onClick={() => { onCreateRequest(menu.workspaceName, menu.collectionName); onClose(); }}>
         <Plus className="h-3.5 w-3.5" /> New Request
+      </button>
+      <button type="button" className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] text-foreground hover:bg-accent/45" onClick={() => { onOpenSettings?.(); onClose(); }}>
+        <Settings className="h-3.5 w-3.5" /> Settings
       </button>
       <div className="my-1 border-t border-border/40" />
       <button type="button" disabled={!canPaste} className={cn("flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] transition-colors", canPaste ? "text-foreground hover:bg-accent/45" : "text-muted-foreground opacity-50 cursor-not-allowed")} onClick={() => { if (canPaste) { onPaste(menu.workspaceName, menu.collectionName); onClose(); } }}>
@@ -308,14 +311,10 @@ function CollectionContextMenu({ menu, onCreateRequest, onRename, onDuplicate, o
   );
 }
 
-function RequestsView({
-  workspaces,
-  activeWorkspaceName,
-  activeCollectionName,
-  activeRequestName,
-  onSelectWorkspace,
-  onSelectCollection,
-  onSelectRequest,
+export function RequestsView({
+  workspaces, activeWorkspaceName, activeCollectionName, activeRequestName,
+  onSelectWorkspace, onSelectCollection, onSelectRequest,
+  onOpenCollectionSettings,
   onCreateWorkspace,
   onRenameWorkspace,
   onDeleteWorkspace,
@@ -788,6 +787,7 @@ function RequestsView({
         onPaste={handlePasteRequest}
         onReveal={handleReveal}
         onDelete={onDeleteCollection}
+        onOpenSettings={onOpenCollectionSettings}
         onClose={() => setCollectionContextMenu(null)}
         canPaste={Boolean(clipboard) && (clipboard.workspaceName !== collectionContextMenu?.workspaceName || clipboard.collectionName !== collectionContextMenu?.collectionName)}
       />
@@ -829,7 +829,8 @@ export function Sidebar({
   onSidebarTabChange, onSelectWorkspace, onSelectCollection, onSelectRequest,
   onCreateWorkspace, onRenameWorkspace, onDeleteWorkspace,
   onCreateCollection, onRenameCollection, onDeleteCollection, onDuplicateCollection,
-  onCreateRequest, onRenameRequest, onDeleteRequest, onDuplicateRequest, onPasteRequest, onTogglePinRequest
+  onCreateRequest, onRenameRequest, onDeleteRequest, onDuplicateRequest, onPasteRequest, onTogglePinRequest,
+  onOpenCollectionSettings
 }) {
   return (
     <aside className={cn("grid h-full min-h-0 overflow-hidden border-r border-border/30 bg-border/20", collapsed ? "grid-cols-[52px]" : "grid-cols-[52px_minmax(0,1fr)] gap-px")}>
@@ -848,6 +849,7 @@ export function Sidebar({
             onSelectWorkspace={onSelectWorkspace}
             onSelectCollection={onSelectCollection}
             onSelectRequest={onSelectRequest}
+            onOpenCollectionSettings={onOpenCollectionSettings}
             onCreateWorkspace={onCreateWorkspace}
             onRenameWorkspace={onRenameWorkspace}
             onDeleteWorkspace={onDeleteWorkspace}

@@ -9,6 +9,18 @@ pub struct RequestPayload {
     pub method: String,
     pub headers: HashMap<String, String>,
     pub body: Option<String>,
+
+    #[serde(default)]
+    pub workspace_name: String,
+
+    #[serde(default)]
+    pub collection_name: String,
+
+    #[serde(default)]
+    pub auth_type: String,
+
+    #[serde(default)]
+    pub inherit_headers: Option<bool>,
 }
 
 #[derive(Debug, Serialize)]
@@ -20,3 +32,4 @@ pub struct ResponsePayload {
     pub body: String,
     pub duration_ms: u128,
 }
+

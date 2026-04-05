@@ -706,7 +706,11 @@ export function useWorkspaceStore() {
     setIsSending(true);
 
     try {
-      const requestPayload = buildRequestPayload(activeRequest);
+      const requestPayload = buildRequestPayload(
+        activeRequest,
+        activeWorkspace?.name ?? "",
+        activeCollection?.name ?? ""
+      );
       const result = await sendHttpRequest(requestPayload);
 
       const rawBody = result.body || "";

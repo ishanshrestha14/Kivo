@@ -2,8 +2,19 @@ use std::collections::HashMap;
 use std::time::Instant;
 
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue, USER_AGENT};
+use tauri::AppHandle;
 
 use super::models::{RequestPayload, ResponsePayload};
+use crate::storage::{get_storage_root, load_collection_config_from_path, load_env_vars};
+
+fn resolve_variables(input: &str, vars: &HashMap<String, String>) -> String {
+    let mut result = input.to_string();
+    for (key, value) in vars {
+        let placeholder = format!("{{{{{}}}}}", key);
+        result = result.replace(&placeholder, value);
+    }
+    result
+}
 
 fn normalize_url(raw: &str) -> Result<String, String> {
     let trimmed = raw.trim();
@@ -36,28 +47,97 @@ fn build_headers(headers: &HashMap<String, String>) -> Result<HeaderMap, String>
     }
 
     if !header_map.contains_key(USER_AGENT) {
-        header_map.insert(USER_AGENT, HeaderValue::from_static("kivo/0.1"));
+        header_map.insert(USER_AGENT, HeaderValue::from_static("kivo/0.2"));
     }
 
     Ok(header_map)
 }
 
 #[tauri::command]
-pub async fn send_http_request(payload: RequestPayload) -> Result<ResponsePayload, String> {
-    let url = normalize_url(&payload.url)?;
+pub async fn send_http_request(
+    app: AppHandle,
+    payload: RequestPayload,
+) -> Result<ResponsePayload, String> {
+
+    let storage_root = get_storage_root(&app).unwrap_or_default();
+    let workspace_path = storage_root.join(&payload.workspace_name);
+    let collection_path = if payload.collection_name.is_empty() {
+        None
+    } else {
+        Some(
+            workspace_path
+                .join("collections")
+                .join(&payload.collection_name),
+        )
+    };
+
+    let env_vars = load_env_vars(&workspace_path, collection_path.as_deref());
+
+    let col_config = collection_path
+        .as_deref()
+        .map(load_collection_config_from_path)
+        .unwrap_or_default();
+
+    let mut merged_headers: HashMap<String, String> = HashMap::new();
+
+    if payload.inherit_headers.unwrap_or(true) {
+        merged_headers = col_config
+            .default_headers
+            .iter()
+            .filter(|row| row.enabled && !row.key.trim().is_empty())
+            .map(|row| {
+                (
+                    resolve_variables(row.key.trim(), &env_vars),
+                    resolve_variables(&row.value, &env_vars),
+                )
+            })
+            .collect();
+    }
+
+    for (k, v) in &payload.headers {
+        merged_headers.insert(
+            resolve_variables(k, &env_vars),
+            resolve_variables(v, &env_vars),
+        );
+    }
+
+    let has_auth_header = merged_headers
+        .keys()
+        .any(|k| k.to_lowercase() == "authorization");
+
+    if payload.auth_type == "inherit" && !has_auth_header {
+        if col_config.default_auth.auth_type == "bearer"
+            && !col_config.default_auth.token.is_empty()
+        {
+            merged_headers.insert(
+                "Authorization".to_string(),
+                format!("Bearer {}", col_config.default_auth.token),
+            );
+        }
+    }
+
+    let resolved_url = resolve_variables(&payload.url, &env_vars);
+    let resolved_body = payload
+        .body
+        .as_deref()
+        .map(|b| resolve_variables(b, &env_vars));
+
+    let url = normalize_url(&resolved_url)?;
+
     let client = reqwest::Client::builder()
         .redirect(reqwest::redirect::Policy::limited(10))
         .build()
         .map_err(|err| err.to_string())?;
+
     let method_str = payload.method.to_uppercase();
     let method = reqwest::Method::from_bytes(method_str.as_bytes())
         .map_err(|_| format!("Unsupported HTTP method: {}", payload.method))?;
 
     let mut request = client
         .request(method.clone(), &url)
-        .headers(build_headers(&payload.headers)?);
+        .headers(build_headers(&merged_headers)?);
 
-    if let Some(body) = payload.body {
+    if let Some(body) = resolved_body {
         if !body.trim().is_empty() {
             request = request.body(body);
         }
@@ -66,6 +146,7 @@ pub async fn send_http_request(payload: RequestPayload) -> Result<ResponsePayloa
     let started_at = Instant::now();
     let response = request.send().await.map_err(|err| err.to_string())?;
     let duration_ms = started_at.elapsed().as_millis();
+
     let status = response.status();
     let status_text = status.canonical_reason().unwrap_or("Unknown").to_string();
     let headers = response
@@ -88,3 +169,4 @@ pub async fn send_http_request(payload: RequestPayload) -> Result<ResponsePayloa
         duration_ms,
     })
 }
+

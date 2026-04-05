@@ -196,14 +196,18 @@ export function buildRequestExport(request) {
   };
 }
 
-export function buildRequestPayload(request) {
+export function buildRequestPayload(request, workspaceName, collectionName) {
   const { method, url, headers, body, hasBody } = buildRequestExport(request);
 
   return {
     method,
     url,
     headers,
-    body: hasBody ? body : null
+    body: hasBody ? body : null,
+    workspaceName: workspaceName || "",
+    collectionName: collectionName || "",
+    authType: request?.auth?.type ?? "none",
+    inheritHeaders: request?.inheritHeaders ?? true,
   };
 }
 
