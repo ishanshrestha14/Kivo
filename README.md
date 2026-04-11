@@ -18,7 +18,7 @@
 
 Kivo is a lightweight cross-platform HTTP client designed for developers who value speed and simplicity. It provides a clean, distraction-free environment for testing APIs and managing request collections without the bloat of traditional tools.
 
-## 📥 Download Kivo (v0.3.4)
+## Download Kivo (v0.3.4)
 
 Get the latest stable version for your operating system:
 
