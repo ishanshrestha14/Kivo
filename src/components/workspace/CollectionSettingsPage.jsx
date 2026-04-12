@@ -97,7 +97,8 @@ function HeadersTable({ rows, onChange, onDelete }) {
 
 function OverviewTab({ workspace, collection, storagePath, envVars, onNavigate }) {
 
-  const sep = storagePath?.includes("\\") ? "\\" : "/";
+  const isWindowsPath = /^[A-Za-z]:[/\\]/.test(storagePath ?? "");
+  const sep = isWindowsPath ? "\\" : "/";
   const collectionPath =
     storagePath && workspace && collection
       ? [storagePath, workspace.name, "collections", collection.name].join(sep)
@@ -109,7 +110,7 @@ function OverviewTab({ workspace, collection, storagePath, envVars, onNavigate }
 
   const [appVersion, setAppVersion] = useState("...");
   useEffect(() => {
-    getVersion().then(setAppVersion).catch(() => {});
+    getVersion().then(setAppVersion).catch(() => { });
   }, []);
 
   return (
@@ -199,10 +200,10 @@ function OverviewTab({ workspace, collection, storagePath, envVars, onNavigate }
                   <p className="text-[11px] text-muted-foreground mt-0.5">Current Version: v{appVersion}</p>
                 </div>
               </div>
-              <Button 
-                variant="secondary" 
-                size="sm" 
-                className="h-8 text-[11.5px] border-border/40 hover:bg-accent/50 transition-colors" 
+              <Button
+                variant="secondary"
+                size="sm"
+                className="h-8 text-[11.5px] border-border/40 hover:bg-accent/50 transition-colors"
                 onClick={() => window.dispatchEvent(new CustomEvent('manual-update-check'))}
               >
                 Check for Updates

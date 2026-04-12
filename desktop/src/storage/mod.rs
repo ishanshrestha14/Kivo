@@ -334,8 +334,9 @@ pub(crate) fn fs_load_workspaces(root: &Path) -> Result<Vec<WorkspaceRecord>, St
             .map_err(|e| format!("Failed to parse workspace.json: {e}"))?;
         let mut collections = Vec::new();
         for col_meta in ws_file.collections {
-            let col_path = if col_meta.path.starts_with('/') || col_meta.path.contains(":\\") {
-                PathBuf::from(&col_meta.path)
+            let col_meta_path = PathBuf::from(&col_meta.path);
+            let col_path = if col_meta_path.is_absolute() {
+                col_meta_path
             } else {
                 path.join(&col_meta.path)
             };
@@ -557,9 +558,15 @@ pub fn set_storage_path(app: AppHandle, path: String) -> Result<(), String> {
 
 #[tauri::command]
 pub fn get_default_storage_path(app: AppHandle) -> Result<String, String> {
-    let doc = app.path().document_dir()
-        .map_err(|e| format!("Failed to resolve document directory: {e}"))?;
-    Ok(doc.join("Kivo").to_string_lossy().to_string())
+    if let Ok(doc) = app.path().document_dir() {
+        return Ok(doc.join("Kivo").to_string_lossy().to_string());
+    }
+    if let Ok(home) = app.path().home_dir() {
+        return Ok(home.join("Kivo").to_string_lossy().to_string());
+    }
+    let app_data = app.path().app_data_dir()
+        .map_err(|e| format!("Failed to resolve any storage directory: {e}"))?;
+    Ok(app_data.join("data").to_string_lossy().to_string())
 }
 
 pub fn get_storage_root(app: &AppHandle) -> Result<PathBuf, String> {
@@ -567,11 +574,15 @@ pub fn get_storage_root(app: &AppHandle) -> Result<PathBuf, String> {
     if let Some(path) = state.storage_path {
         return Ok(path);
     }
-    match app.path().document_dir() {
-        Ok(doc) => Ok(doc.join("Kivo")),
-        Err(_) => app.path().app_data_dir()
-            .map_err(|e| format!("Failed to resolve fallback storage directory: {e}")),
+    if let Ok(doc) = app.path().document_dir() {
+        return Ok(doc.join("Kivo"));
     }
+    if let Ok(home) = app.path().home_dir() {
+        return Ok(home.join("Kivo"));
+    }
+    app.path().app_data_dir()
+        .map(|d| d.join("data"))
+        .map_err(|e| format!("Failed to resolve fallback storage directory: {e}"))
 }
 
 #[tauri::command]
@@ -695,8 +706,9 @@ pub fn reveal_item(
             let ws_file: WorkspaceFile = serde_json::from_str(&ws_json)
                 .map_err(|e| format!("Failed to parse workspace.json: {e}"))?;
             if let Some(col_meta) = ws_file.collections.iter().find(|c| c.name == col_name) {
-                path = if col_meta.path.starts_with('/') || col_meta.path.contains(":\\") {
-                    PathBuf::from(&col_meta.path)
+                let col_meta_path = PathBuf::from(&col_meta.path);
+                path = if col_meta_path.is_absolute() {
+                    col_meta_path
                 } else {
                     path.join(&col_meta.path)
                 };
