@@ -1,9 +1,10 @@
 import { BadgeCheck, Clock3, Cookie, FileJson2, ListTree, Search, X } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 
 import { CodeEditor } from "@/components/workspace/CodeEditor.jsx";
 import { Card } from "@/components/ui/card.jsx";
 import { cn } from "@/lib/utils.js";
+import { filterJson } from "@/lib/json-filter.js";
 
 import { JsonTree } from "@/components/ui/JsonTree.jsx";
 
@@ -19,42 +20,6 @@ function getTone(status) {
   }
 
   return "muted";
-}
-
-function filterJson(data, query) {
-  if (!query) return data;
-  const q = query.toLowerCase();
-
-  function filterNode(node, key = null) {
-    if (key && String(key).toLowerCase().includes(q)) return node;
-
-    if (node === null) {
-      if ("null".includes(q)) return node;
-      return undefined;
-    }
-
-    if (typeof node === "object") {
-      const isArray = Array.isArray(node);
-      const res = isArray ? [] : {};
-      let hasMatch = false;
-
-      for (const [k, v] of Object.entries(node)) {
-        const childNode = filterNode(v, k);
-        if (childNode !== undefined) {
-          hasMatch = true;
-          if (isArray) res.push(childNode);
-          else res[k] = childNode;
-        }
-      }
-      return hasMatch ? res : undefined;
-    }
-
-    if (String(node).toLowerCase().includes(q)) return node;
-    return undefined;
-  }
-
-  const result = filterNode(data);
-  return result === undefined ? (Array.isArray(data) ? [] : {}) : result;
 }
 
 export function ResponsePane({ response, activeTab, onTabChange, bodyView, onBodyViewChange }) {
@@ -85,7 +50,15 @@ export function ResponsePane({ response, activeTab, onTabChange, bodyView, onBod
     }
   }
 
+  const [inputValue, setInputValue] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchQuery(inputValue);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [inputValue]);
 
   const filteredJson = useMemo(() => {
     if (!parsedJson) return null;
@@ -147,12 +120,12 @@ export function ResponsePane({ response, activeTab, onTabChange, bodyView, onBod
                     <input
                       type="text"
                       placeholder="Filter JSON tree..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
+                      value={inputValue}
+                      onChange={(e) => setInputValue(e.target.value)}
                       className="w-full bg-transparent text-[11px] font-medium outline-none placeholder:text-muted-foreground/60 text-foreground"
                     />
-                    {searchQuery && (
-                      <button onClick={() => setSearchQuery("")} className="text-muted-foreground hover:text-foreground shrink-0 focus:outline-none">
+                    {inputValue && (
+                      <button onClick={() => setInputValue("")} className="text-muted-foreground hover:text-foreground shrink-0 focus:outline-none">
                         <X className="h-[11px] w-[11px]" />
                       </button>
                     )}

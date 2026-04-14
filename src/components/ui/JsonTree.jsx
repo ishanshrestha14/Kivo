@@ -142,16 +142,21 @@ export function JsonTree({ data, name, depth = 0, isLast = true, searchQuery = "
       
       {expanded && (
         <div className="flex flex-col border-l border-border/20 ml-[5px] pl-4">
-          {keys.map((key, index) => (
+          {keys.slice(0, 100).map((key, index) => (
             <JsonTree
               key={key}
               name={isArray ? null : key}
               data={data[key]}
               depth={depth + 1}
-              isLast={index === keys.length - 1}
+              isLast={index === Math.min(keys.length, 100) - 1}
               searchQuery={searchQuery}
             />
           ))}
+          {keys.length > 100 && (
+            <div className="flex items-center gap-1.5 py-1 text-muted-foreground italic text-[11px]">
+              <span>...and {keys.length - 100} more items hidden</span>
+            </div>
+          )}
         </div>
       )}
       
