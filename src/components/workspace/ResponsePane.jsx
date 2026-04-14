@@ -4,8 +4,9 @@ import { CodeEditor } from "@/components/workspace/CodeEditor.jsx";
 import { Card } from "@/components/ui/card.jsx";
 import { cn } from "@/lib/utils.js";
 
+import { JsonTree } from "@/components/ui/JsonTree.jsx";
+
 const responseTabs = ["Body", "Headers", "Cookies", "Meta"];
-const bodyViews = ["JSON", "Raw"];
 
 function getTone(status) {
   if (status >= 200 && status < 400) {
@@ -21,7 +22,31 @@ function getTone(status) {
 
 export function ResponsePane({ response, activeTab, onTabChange, bodyView, onBodyViewChange }) {
   const tone = getTone(response.status);
-  const canUseJsonView = response.isJson;
+  
+  const contentType = Object.entries(response.headers).find(([k]) => k.toLowerCase() === 'content-type')?.[1]?.toLowerCase() || "";
+  const isHtml = contentType.includes("text/html");
+  const isJson = response.isJson;
+
+  let bodyViews = ["Raw"];
+  if (isJson) {
+    bodyViews = ["Tree", "JSON", "Raw"];
+  } else if (isHtml) {
+    bodyViews = ["Preview", "Raw"];
+  }
+
+  let currentView = bodyView;
+  if (!bodyViews.includes(currentView)) {
+    currentView = bodyViews[0];
+  }
+
+  let parsedJson = null;
+  if (isJson && currentView === "Tree") {
+    try {
+      parsedJson = JSON.parse(response.body);
+    } catch {
+      parsedJson = null;
+    }
+  }
 
   return (
     <Card className="flex h-full min-h-0 flex-col gap-0 overflow-hidden border-0 bg-card/84 p-0 shadow-none">
@@ -77,10 +102,9 @@ export function ResponsePane({ response, activeTab, onTabChange, bodyView, onBod
                     key={view}
                     type="button"
                     onClick={() => onBodyViewChange(view)}
-                    disabled={view === "JSON" && !canUseJsonView}
                     className={cn(
-                      "px-2 py-1 text-muted-foreground disabled:opacity-40",
-                      bodyView === view && "bg-secondary/35 text-foreground"
+                      "px-2 py-1 text-muted-foreground disabled:opacity-40 transition-colors",
+                      currentView === view && "bg-secondary/35 text-foreground"
                     )}
                   >
                     {view}
@@ -88,13 +112,28 @@ export function ResponsePane({ response, activeTab, onTabChange, bodyView, onBod
                 ))}
               </div>
             </div>
-            <CodeEditor
-              readOnly
-              value={bodyView === "JSON" && canUseJsonView ? response.body : response.rawBody}
-              language={bodyView === "JSON" && canUseJsonView ? "json" : "text"}
-              wrapLines
-              placeholder="Response body will appear here"
-            />
+            {currentView === "Tree" && parsedJson !== null ? (
+              <div className="h-full overflow-auto thin-scrollbar bg-background/20 rounded p-4 border border-border/10 shadow-inner">
+                <JsonTree data={parsedJson} />
+              </div>
+            ) : currentView === "Preview" ? (
+              <div className="h-full overflow-hidden rounded bg-white border border-border/10 shadow-inner">
+                <iframe
+                  srcDoc={response.body || response.rawBody}
+                  title="HTML Preview"
+                  sandbox="allow-same-origin"
+                  className="w-full h-full border-0"
+                />
+              </div>
+            ) : (
+              <CodeEditor
+                readOnly
+                value={currentView === "JSON" && isJson ? response.body : response.rawBody}
+                language={currentView === "JSON" && isJson ? "json" : "text"}
+                wrapLines
+                placeholder="Response body will appear here"
+              />
+            )}
           </div>
         ) : null}
 
