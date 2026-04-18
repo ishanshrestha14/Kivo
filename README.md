@@ -30,21 +30,21 @@ Kivo is a lightweight cross-platform HTTP client designed for developers who val
 - **Advanced Request Interaction**: Comprehensive context menus for cloning, renaming, and copy-pasting requests
 - **Self-Updating**: Built-in background auto-updater with signature verification guarantees you're always on the latest version.
 - **Security**: Local-first data storage ensuring your request data stays on your machine
-- **JSON Response Query Engine** *(upcoming)*: Filter and search JSON response bodies using text search, conditional expressions (`userid > 3`), compound queries (`age > 20 && status == active`), and logical operators. See the [engine documentation](docs/json-query-engine.md) for details.
+- **JSON Response Query Engine**: Filter and search JSON response bodies using text search, conditional expressions (`userid > 3`), compound queries (`age > 20 && status == active`), and logical operators. See the [engine documentation](docs/json-query-engine.md) for details.
+- **Expanded Auth Support**: Comprehensive support for Basic Auth, API Key (Header/Query), and environment-aware token management with inheritance.
+- **Environment Autocomplete**: Real-time `{{variable}}` suggestions with arrow-key navigation for a faster workflow.
 
-> **Note**: The JSON Query Engine is not included in the latest release (v0.3.5). To try it, [build the project from source](#build-from-source). It will be available in the next release.
-
-## Download Kivo (v0.3.5)
+## Download Kivo (v0.3.6)
 
 Get the latest stable version for your operating system:
 
 | Platform | Installer | Architecture |
 | :--- | :--- | :--- |
-| **Windows** | [Download .exe](https://github.com/dexter-xD/Kivo/releases/download/v0.3.5/Kivo_0.3.5_x64-setup.exe) / [.msi](https://github.com/dexter-xD/Kivo/releases/download/v0.3.5/Kivo_0.3.5_x64_en-US.msi) | `x64` |
-| **macOS** | [Apple Silicon .dmg](https://github.com/dexter-xD/Kivo/releases/download/v0.3.5/Kivo_0.3.5_aarch64.dmg) | `arm64` |
-| **macOS** | [Intel .dmg](https://github.com/dexter-xD/Kivo/releases/download/v0.3.5/Kivo_0.3.5_x64.dmg) | `x64` |
-| **Linux** | [Download .deb](https://github.com/dexter-xD/Kivo/releases/download/v0.3.5/Kivo_0.3.5_amd64.deb) | `x64` |
-| **Linux** | [Download .rpm](https://github.com/dexter-xD/Kivo/releases/download/v0.3.5/Kivo-0.3.5-1.x86_64.rpm) | `x64` |
+| **Windows** | [Download .exe](https://github.com/dexter-xD/Kivo/releases/download/v0.3.6/Kivo_0.3.6_x64-setup.exe) / [.msi](https://github.com/dexter-xD/Kivo/releases/download/v0.3.6/Kivo_0.3.6_x64_en-US.msi) | `x64` |
+| **macOS** | [Apple Silicon .dmg](https://github.com/dexter-xD/Kivo/releases/download/v0.3.6/Kivo_0.3.6_aarch64.dmg) | `arm64` |
+| **macOS** | [Intel .dmg](https://github.com/dexter-xD/Kivo/releases/download/v0.3.6/Kivo_0.3.6_x64.dmg) | `x64` |
+| **Linux** | [Download .deb](https://github.com/dexter-xD/Kivo/releases/download/v0.3.6/Kivo_0.3.6_amd64.deb) | `x64` |
+| **Linux** | [Download .rpm](https://github.com/dexter-xD/Kivo/releases/download/v0.3.6/Kivo-0.3.6-1.x86_64.rpm) | `x64` |
 
 *For other formats and old releases, visit the [Releases page](https://github.com/dexter-xD/Kivo/releases).*
 
@@ -52,15 +52,15 @@ Get the latest stable version for your operating system:
 
 - **Debian / Ubuntu**:
   ```bash
-  sudo apt install ./Kivo_0.3.5_amd64.deb
+  sudo apt install ./Kivo_0.3.6_amd64.deb
   ```
 - **Fedora / RHEL**:
   ```bash
-  sudo dnf install ./Kivo-0.3.5-1.x86_64.rpm
+  sudo dnf install ./Kivo-0.3.6-1.x86_64.rpm
   ```
 - **Arch / Other (RPM via rpm tool)**:
   ```bash
-  sudo rpm -i --nodeps --nosignature ./Kivo-0.3.5-1.x86_64.rpm
+  sudo rpm -i --nodeps --nosignature ./Kivo-0.3.6-1.x86_64.rpm
   ```
 
 ---
@@ -112,6 +112,13 @@ Contributions are welcome! If you have suggestions for improvements or encounter
 5. Open a Pull Request
 
 ## Changelog
+
+### v0.3.6 (2026-04-19)
+
+- **Expanded Auth Support**. Added Basic Auth and API Key (Header/Query) with collection-level inheritance.
+- **JSON Query Engine v1**. Integrated a high-performance, index-backed engine for real-time response filtering.
+- **Smart Env Autocomplete**. Added `{{` triggered suggestions with arrow-key navigation and Tab selection.
+- **UI & Performance**. Refined JSON tree visualization, added bulk-edit mode, and fixed state normalization bugs.
 
 ### v0.3.5 (2026-04-12)
 
