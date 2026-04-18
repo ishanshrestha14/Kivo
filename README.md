@@ -132,22 +132,6 @@ Contributions are welcome! If you have suggestions for improvements or encounter
 - **Linux RPM Expansion**. Added support for `.rpm` packages, bringing Kivo to Fedora, RHEL, openSUSE, and more.
 - **Improved Release Pipeline**. Automated build and release process for all major desktop platforms.
 
-### v0.3.3 (2026-04-11)
-
-- **Auto-Update Polish**. Refined the auto-update UI to adhere to the sharp-edged design system.
-- **Bug Fixes**. Fixed various UI inconsistencies and improved window drag regions.
-
-### v0.3.2 (2026-04-08)
-
-- **Auto Updater**. Kivo now automatically checks, downloads, and stages updates in the background flawlessly, offering a convenient Restart button once verified.
-- **Signed Upgrades**. Ensures full security by validating all upgrades against cryptographic public keys.
-
-### v0.3.1 (2026-04-06)
-
-- **Collection Data Loss**. Editing environment variables no longer wipes requests and subfolders from the collection directory.
-- **Requests Not Persisted**. New requests are now correctly saved to disk and survive app restarts.
-- **Request Not Working**. Deleting a request now properly removes its file from disk.
-- **Slash Names Breaking Storage**. Collection and request names with `/` are now safely sanitized for the filesystem.
 
 See the full [CHANGELOG.md](CHANGELOG.md) for more details.
 
